@@ -1,0 +1,14 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"type": "chrome",
+			"request": "launch",
+			"name": "Attach to Chrome",
+			"port": 9225,
+			"webRoot": "${workspaceFolder}",
+			"url": "http://localhost:8080",
+			"preLaunchTask": "npm: dev-web"
+		}
+	]
+}

@@ -1,0 +1,10 @@
+*
+*/**
+!out/**/*
+!node_modules/**/*
+!package.json
+!README.md
+!CHANGELOG.md
+!LICENSE.txt
+!docs/**/*
+

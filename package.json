@@ -1,0 +1,61 @@
+{
+	"name": "realtime-debugging",
+	"private": true,
+	"displayName": "Real-Time Debugging",
+	"description": "This extension visualizes how your code is being executed.",
+	"version": "0.1.0",
+	"license": "GPL-3.0",
+	"publisher": "hediet",
+	"author": {
+		"email": "henning.dieterichs@live.de",
+		"name": "Henning Dieterichs"
+	},
+	"keywords": [
+		"debugger",
+		"debug",
+		"javascript",
+		"debugging",
+		"visual",
+		"realtime",
+		"real-time",
+		"logpoint",
+		"logging",
+		"log"
+	],
+	"readme": "./README.md",
+	"icon": "docs/logo.png",
+	"engines": {
+		"vscode": "^1.44.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"onDebugAdapterProtocolTracker"
+	],
+	"repository": {
+		"url": "https://github.com/hediet/vscode-realtime-debugging.git"
+	},
+	"bugs": {
+		"url": "https://github.com/hediet/vscode-realtime-debugging/issues"
+	},
+	"main": "./out/extension",
+	"contributes": {},
+	"scripts": {
+		"pub": "vsce publish --yarn",
+		"package": "vsce package --yarn",
+		"vscode:prepublish": "npm run build",
+		"build": "tsc -p ./",
+		"dev": "tsc -watch -p ./"
+	},
+	"devDependencies": {
+		"@types/node": "^13.13.5",
+		"@types/vscode": "1.44.0",
+		"tslint": "^6.1.2",
+		"typescript": "^3.8.3"
+	},
+	"dependencies": {
+		"@hediet/node-reload": "^0.7.3",
+		"@hediet/std": "0.6.0"
+	}
+}
