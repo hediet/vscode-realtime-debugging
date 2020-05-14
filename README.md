@@ -25,3 +25,7 @@ I highly recommend binding the command `Debug: Add Logpoint...` to a shortcut th
 With logpoints you don't need to restart a program when you want to visualize its execution.
 
 ![](./docs/logpoints.gif)
+
+## Caveats
+
+Does not work when debugging VS Code extension, since they don't write to stdout (`console.log` is patched and the `output` event is not sent by the debug adapter).
