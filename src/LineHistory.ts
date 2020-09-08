@@ -5,6 +5,9 @@ import {
 	workspace,
 	MarkdownString,
 	DecorationOptions,
+	TextDocument,
+	TextDocumentChangeEvent,
+	TextDocumentContentChangeEvent
 } from "vscode";
 
 export class LogResultDecorator {
@@ -26,8 +29,31 @@ export class LogResultDecorator {
 	constructor() {
 		this.dispose.track(
 			workspace.onDidChangeTextDocument((evt) => {
-				this.map.delete(evt.document.uri.toString());
+				this.updateLineNumbers(evt);
 				this.updateDecorations();
+			})
+		);
+		this.dispose.track(
+			workspace.onDidCloseTextDocument((doc) => {
+				this.map.delete(doc.uri.toString());
+			})
+		);
+		this.dispose.track(
+			workspace.onDidSaveTextDocument((doc) => {
+				this.map.delete(doc.uri.toString());
+				this.updateDecorations();
+			})
+		);
+		this.dispose.track(
+			workspace.onDidOpenTextDocument((doc) => {
+				this.updateOffsets(doc);
+			})
+		);
+		this.dispose.track(
+			window.onDidChangeActiveTextEditor((doc) => {
+				if(doc){
+					this.updateOffsets(doc.document);
+				}
 			})
 		);
 	}
@@ -92,9 +118,68 @@ export class LogResultDecorator {
 			);
 		}
 	}
+
+	private updateLineNumbers(evt: TextDocumentChangeEvent){
+		if(evt.contentChanges.length === 0){
+			this.updateOffsets(evt.document);
+		} else{
+			const entry = this.map.get(evt.document.uri.toString())
+			if(entry){
+				entry.lines.forEach((lineHistory, k) => {
+					const success = updateLineLocation(lineHistory, evt);
+					if(!success){
+						entry.lines.delete(k);
+					}
+				})
+			}
+		}
+	}
+	private updateOffsets(doc: TextDocument){
+		const entry = this.map.get(doc.uri.toString())
+		if(entry){
+			entry.lines.forEach(lineHistory => {
+				const line = doc.lineAt(lineHistory.line);
+				lineHistory.offset = doc.offsetAt(line.range.end);
+			})
+		}
+	}
 }
 
 class LineHistory {
-	constructor(public readonly uri: Uri, public readonly line: number) {}
+	constructor(public readonly uri: Uri, public line: number) {}
 	public readonly history: string[] = [];
+	public offset?: number;
+}
+
+function updateLineLocation(lineHistory: LineHistory, evt: TextDocumentChangeEvent){
+	const doc = evt.document;
+	let success: boolean = true;
+	evt.contentChanges.forEach((change) => {
+		const tmp = updateLineLocationByChange(lineHistory, change, doc);
+		success = tmp && success;
+	});
+	return (success)
+}
+function updateLineLocationByChange(lineHistory: LineHistory, change: TextDocumentContentChangeEvent, doc: TextDocument){
+	const start = change.rangeOffset;
+	const end0 = start + change.rangeLength;
+	const end1 = start + change.text.length;
+	const offset = lineHistory.offset;
+	let success: boolean = true;
+	if(offset === undefined){
+		success = false;
+	} else if(offset < start){
+		// do nothing
+	} else if(offset <= end0){
+		success = false;
+	} else{ // offset > end0
+		const offset1 = offset + end1 - end0;
+		const position = doc.positionAt(offset1)
+		const line = doc.lineAt(position)
+		const lineNumber = line.lineNumber;
+		lineHistory.offset = offset1;
+		lineHistory.line = lineNumber;
+		success = true;
+	}
+	return(success);
 }
