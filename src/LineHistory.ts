@@ -7,7 +7,7 @@ import {
 	DecorationOptions,
 	TextDocument,
 	TextDocumentChangeEvent,
-	TextDocumentContentChangeEvent
+	TextDocumentContentChangeEvent,
 } from "vscode";
 
 export class LogResultDecorator {
@@ -46,12 +46,12 @@ export class LogResultDecorator {
 				this.updateDecorations();
 			}),
 			window.onDidChangeActiveTextEditor((doc) => {
-				if(doc){
+				if (doc) {
 					// convert line numbers to offsets
 					this.addOffsets(doc.document);
 					this.updateDecorations();
 				}
-			})
+			}),
 		]);
 	}
 
@@ -116,32 +116,32 @@ export class LogResultDecorator {
 		}
 	}
 
-	private updateLineNumbers(evt: TextDocumentChangeEvent){
-		if(evt.contentChanges.length === 0){
+	private updateLineNumbers(evt: TextDocumentChangeEvent) {
+		if (evt.contentChanges.length === 0) {
 			// nothing changed. Use this occasion to add/update offsets
 			this.addOffsets(evt.document);
-		} else{
+		} else {
 			// find matching annotations and update lines/offsets
-			const entry = this.map.get(evt.document.uri.toString())
-			if(entry){
+			const entry = this.map.get(evt.document.uri.toString());
+			if (entry) {
 				entry.lines.forEach((lineHistory, k) => {
 					const success = updateLineLocation(lineHistory, evt);
-					if(!success){
+					if (!success) {
 						entry.lines.delete(k);
 					}
-				})
+				});
 			}
 		}
 	}
-	private addOffsets(doc: TextDocument){
+	private addOffsets(doc: TextDocument) {
 		// method to update/add offsets to the lineHistory items
 		// is done on document open, since TextDocumentchangeEvents do not contain the necessary info to do this after the change
-		const entry = this.map.get(doc.uri.toString())
-		if(entry){
-			entry.lines.forEach(lineHistory => {
+		const entry = this.map.get(doc.uri.toString());
+		if (entry) {
+			entry.lines.forEach((lineHistory) => {
 				const line = doc.lineAt(lineHistory.line);
 				lineHistory.offset = doc.offsetAt(line.range.end);
-			})
+			});
 		}
 	}
 }
@@ -152,7 +152,10 @@ class LineHistory {
 	public offset?: number; // is the offset of the last character on the line
 }
 
-function updateLineLocation(lineHistory: LineHistory, evt: TextDocumentChangeEvent){
+function updateLineLocation(
+	lineHistory: LineHistory,
+	evt: TextDocumentChangeEvent
+) {
 	// handle a TextDocumentChange event
 	// handles each change in the event separately
 	// returns false, if any change affects a range that includes the considered line (-> success == false)
@@ -163,30 +166,35 @@ function updateLineLocation(lineHistory: LineHistory, evt: TextDocumentChangeEve
 		const tmp = updateLineLocationByChange(lineHistory, change, doc);
 		success = tmp && success;
 	});
-	return (success)
+	return success;
 }
-function updateLineLocationByChange(lineHistory: LineHistory, change: TextDocumentContentChangeEvent, doc: TextDocument){
+function updateLineLocationByChange(
+	lineHistory: LineHistory,
+	change: TextDocumentContentChangeEvent,
+	doc: TextDocument
+) {
 	const start = change.rangeOffset;
 	const end0 = start + change.rangeLength; // end of the range before the change
 	const end1 = start + change.text.length; // end of the range after the change
 	const offset0 = lineHistory.offset; // offset of the last character on the line from lineHistory (before the change)
 	let success: boolean = true; // true if change was handled properly, false if the anootation should be deleted
-	if(offset0 === undefined){
+	if (offset0 === undefined) {
 		// offsets not known --> delete annotation
 		success = false;
-	} else if(offset0 < start){
+	} else if (offset0 < start) {
 		// change happened after the line --> do nothing
-	} else if(offset0 <= end0){
+	} else if (offset0 <= end0) {
 		// changed range indluces the line --> delete annotation
 		success = false;
-	} else{ // offset > end0
+	} else {
+		// offset > end0
 		// change happened before the line --> adjust lineNumber/offset of lineHistory
 		const offset1 = offset0 + end1 - end0;
-		const position = doc.positionAt(offset1)
-		const line = doc.lineAt(position)
+		const position = doc.positionAt(offset1);
+		const line = doc.lineAt(position);
 		lineHistory.line = line.lineNumber;
 		lineHistory.offset = offset1;
 		success = true;
 	}
-	return(success);
+	return success;
 }
