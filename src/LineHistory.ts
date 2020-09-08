@@ -27,38 +27,32 @@ export class LogResultDecorator {
 	);
 
 	constructor() {
-		this.dispose.track(
+		this.dispose.track([
 			workspace.onDidChangeTextDocument((evt) => {
 				this.updateLineNumbers(evt);
 				this.updateDecorations();
-			})
-		);
-		this.dispose.track(
+			}),
 			workspace.onDidCloseTextDocument((doc) => {
 				this.map.delete(doc.uri.toString());
-			})
-		);
-		this.dispose.track(
+			}),
 			workspace.onDidSaveTextDocument((doc) => {
 				// remove annotations on save. could be disabled/removed.
 				this.map.delete(doc.uri.toString());
 				this.updateDecorations();
-			})
-		);
-		this.dispose.track(
+			}),
 			workspace.onDidOpenTextDocument((doc) => {
 				// convert line numbers to offsets
-				this.updateOffsets(doc);
-			})
-		);
-		this.dispose.track(
+				this.addOffsets(doc);
+				this.updateDecorations();
+			}),
 			window.onDidChangeActiveTextEditor((doc) => {
 				if(doc){
 					// convert line numbers to offsets
-					this.updateOffsets(doc.document);
+					this.addOffsets(doc.document);
+					this.updateDecorations();
 				}
 			})
-		);
+		]);
 	}
 
 	public log(uri: Uri, line: number, output: string): void {
@@ -124,8 +118,10 @@ export class LogResultDecorator {
 
 	private updateLineNumbers(evt: TextDocumentChangeEvent){
 		if(evt.contentChanges.length === 0){
-			this.updateOffsets(evt.document);
+			// nothing changed. Use this occasion to add/update offsets
+			this.addOffsets(evt.document);
 		} else{
+			// find matching annotations and update lines/offsets
 			const entry = this.map.get(evt.document.uri.toString())
 			if(entry){
 				entry.lines.forEach((lineHistory, k) => {
@@ -137,7 +133,7 @@ export class LogResultDecorator {
 			}
 		}
 	}
-	private updateOffsets(doc: TextDocument){
+	private addOffsets(doc: TextDocument){
 		// method to update/add offsets to the lineHistory items
 		// is done on document open, since TextDocumentchangeEvents do not contain the necessary info to do this after the change
 		const entry = this.map.get(doc.uri.toString())
@@ -173,24 +169,23 @@ function updateLineLocationByChange(lineHistory: LineHistory, change: TextDocume
 	const start = change.rangeOffset;
 	const end0 = start + change.rangeLength; // end of the range before the change
 	const end1 = start + change.text.length; // end of the range after the change
-	const offset = lineHistory.offset; // offset of the last character on the line from lineHistory
+	const offset0 = lineHistory.offset; // offset of the last character on the line from lineHistory (before the change)
 	let success: boolean = true; // true if change was handled properly, false if the anootation should be deleted
-	if(offset === undefined){
+	if(offset0 === undefined){
 		// offsets not known --> delete annotation
 		success = false;
-	} else if(offset < start){
+	} else if(offset0 < start){
 		// change happened after the line --> do nothing
-	} else if(offset <= end0){
+	} else if(offset0 <= end0){
 		// changed range indluces the line --> delete annotation
 		success = false;
 	} else{ // offset > end0
 		// change happened before the line --> adjust lineNumber/offset of lineHistory
-		const offset1 = offset + end1 - end0;
+		const offset1 = offset0 + end1 - end0;
 		const position = doc.positionAt(offset1)
 		const line = doc.lineAt(position)
-		const lineNumber = line.lineNumber;
+		lineHistory.line = line.lineNumber;
 		lineHistory.offset = offset1;
-		lineHistory.line = lineNumber;
 		success = true;
 	}
 	return(success);
