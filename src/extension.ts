@@ -52,13 +52,15 @@ export class Extension {
 							const output = body.output;
 							const source = body.source;
 
-							const path = source.path;
-							const line = body.line - 1;
+							if(source && source.path && body.line){
+								const path = source.path;
+								const line = body.line - 1;
 
-							const pathUri = vscode.Uri.file(path);
+								const pathUri = vscode.Uri.file(path);
 
-							this.executionHightlighter.highlight(pathUri, line);
-							this.logResultDecorator.log(pathUri, line, output);
+								this.executionHightlighter.highlight(pathUri, line);
+								this.logResultDecorator.log(pathUri, line, output);
+							}
 						}
 
 						if (this.log) {
